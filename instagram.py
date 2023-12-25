@@ -9,7 +9,11 @@ link = "https://www.instagram.com/p/Cz44st4sgkZ/?hl=en"
 
 
 def download_post(link):
-    extract_code = lambda link: link.split("/p/")[1].split("/")[0]
+    extract_code = lambda link,item: link.split(f"/{item}/")[1].split("/")[0]
+    try:
+        code = extract_code(link, "p")
+    except:
+        code = extract_code(link, "reel")
     code = extract_code(link)
     post = Post.from_shortcode(L.context, code)
     try:
