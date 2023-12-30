@@ -1,6 +1,6 @@
 import telebot
 import os
-from instagram import download_post, get_caption
+from instagram import download_post, get_caption, download_story
 import shutil
 import subprocess
 import time
@@ -8,31 +8,42 @@ import time
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, "HTML")
 
+
+
+def send_items(is_successful, path, chat_id):
+    caption,videos,photos = get_caption(is_successful,path)
+    for media in photos:
+        with open(media, "rb") as file:
+            bot.send_photo(chat_id, file, caption)
+    for media in videos:
+        with open(media, "rb") as file:
+            bot.send_video(chat_id, file, caption)
+    command = ["rmdir", "/s", "/q", f".\\{path}"]
+    subprocess.run(command, shell=True)
 @bot.message_handler(commands=["start"])
 def start(message):
     bot.reply_to(message, f"Hello {message.from_user.first_name}")
 
+@bot.message_handler(regexp="^@")
+def story(message):
+    delete = bot.reply_to(message, "Downloading story...")
+    text = message.text
+    username = text.split("@")[1]
+    is_successful, path = download_story(username)
+    send_items(is_successful,path, message.chat.id)  
+    bot.delete_message(message.chat.id, delete.id)  
+    
+
 
 @bot.message_handler(regexp="(https?:\\/\\/)?(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%_\\+.~#?&//=]*)?")
 def instagram(message):
+    check = bot.reply_to(message, "Checking link")
     link = message.text
     is_successful, path = download_post(link)
-    caption,videos,photos = get_caption(is_successful,path)
-    if len(videos)>0:
-        media_group = [telebot.types.InputMediaVideo(open(file, 'rb')) for file in videos]
-        media_group[0].caption = caption
-        bot.send_media_group(message.chat.id, media_group)
-    else:
-        media_group = [telebot.types.InputMediaPhoto(open(file, 'rb')) for file in photos]
-        media_group[0].caption = caption
-        bot.send_media_group(message.chat.id, media_group)
+    send_items(is_successful,path, message.chat.id)
+    bot.delete_message(message.chat.id,check.id)
     
-    print(path)
 
-    time.sleep(5)
-
-    command = ["rmdir", "/s", "/q", f".\\{path}"]
-    subprocess.run(command, shell=True)
         
 
 
