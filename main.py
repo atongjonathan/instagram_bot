@@ -1,9 +1,8 @@
 import telebot
 import os
 from instagram import download_post, get_caption, download_story
-import shutil
 import subprocess
-import time
+import pathlib
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, "HTML")
@@ -18,7 +17,11 @@ def send_items(is_successful, path, chat_id):
     for media in videos:
         with open(media, "rb") as file:
             bot.send_video(chat_id, file, caption)
-    command = ["rmdir", "/s", "/q", f".\\{path}"]
+    this_path = pathlib.Path(__file__).resolve()
+    parent_path = this_path.parent
+    full_path = parent_path/path
+    print(full_path)
+    command = ["rmdir", "/s", "/q", f"{full_path}"]
     subprocess.run(command, shell=True)
 @bot.message_handler(commands=["start"])
 def start(message):
